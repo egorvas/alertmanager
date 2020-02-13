@@ -1,0 +1,34 @@
+[
+  {
+    "alertname":"libra-scanner-watchdog",
+    "ruleSet":{
+      "initialSilence":"10m",
+      "daySilenceInterval":"4h",
+      "nightSilenceInterval":"6h",
+      "useNightSilenceIntervalAtWeekend":true,
+      "daySilenceIntervalStart":"10:00",
+      "autoResolve":{
+        "enabled":true,
+        "interval":"10h"
+      },
+      "daySilenceIntervalFinish":"20:00",
+      "sendResolved":true
+    }
+  },
+  {
+    "alertname":"test-alert",
+    "ruleSet":{
+      "initialSilence":"1m30s",
+      "daySilenceInterval":"2m",
+      "nightSilenceInterval":"4m",
+      "useNightSilenceIntervalAtWeekend":true,
+      "daySilenceIntervalStart":"10:00",
+      "daySilenceIntervalFinish":"20:00",
+      "autoResolve":{
+        "enabled":true,
+        "interval":"6m"
+      },
+      "sendResolved":true
+    }
+  }
+]

@@ -1,0 +1,52 @@
+version: '2.4'
+services:
+  alertmanager:
+    image: prom/alertmanager:latest
+    cpu_percent: 5
+    mem_limit: 500m
+    mem_reservation: 100m
+    ports:
+      - 9093:9093
+    volumes:
+      - ./local/alertmanager:/etc/alertmanager/
+    restart: on-failure
+  karma:
+    image: lmierzwa/karma:latest
+    cpu_percent: 2
+    mem_limit: 300m
+    mem_reservation: 100m
+    ports:
+      - 9094:8080
+    restart: on-failure
+    environment:
+        - ALERTMANAGER_URI=http://alertmanager:9093
+  alertmanager-webhook-proxy:
+    cpu_percent: 2
+    mem_limit: 300m
+    mem_reservation: 100m
+    restart: on-failure
+    ports:
+      - 9095:3000
+    build:
+      context: alertmanager_webhook_proxy
+      dockerfile: Dockerfile
+    environment:
+        - WEBHOOK_URL=http://alertmanager-bot:8080
+        - ALERTMANAGER_URL=http://alertmanager:9093
+  alertmanager-bot:
+    image: metalmatze/alertmanager-bot:0.4.2
+    cpu_percent: 2
+    mem_limit: 300m
+    mem_reservation: 100m
+    restart: on-failure
+    environment:
+        - ALERTMANAGER_URL=http://alertmanager:9093
+        - BOLT_PATH=/data/bot.db
+        - STORE=bolt
+        - TELEGRAM_ADMIN=${TELEGRAM_ADMIN}
+        - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+    volumes:
+      - ./local/alertmanager-bot/data:/data/
+      - ./local/alertmanager-bot/templates:/templates
+networks:
+  default:
