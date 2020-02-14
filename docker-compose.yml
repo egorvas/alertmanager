@@ -7,6 +7,7 @@ services:
     mem_limit: 500m
     networks:
       - default-network
+      - alertmanager_default
     mem_reservation: 100m
     ports:
       - 9093:9093
@@ -31,6 +32,7 @@ services:
     mem_reservation: 100m
     restart: on-failure
     networks:
+      - alertmanager_default
       - default-network
     ports:
       - 9095:3000
@@ -60,3 +62,4 @@ networks:
   default-network:
     name: default-network
   default:
+    name: alertmanager_default
