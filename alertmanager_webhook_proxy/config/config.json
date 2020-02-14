@@ -2,7 +2,7 @@
   {
     "alertname":"libra-watchdog",
     "ruleSet":{
-      "initialSilence":"6m",
+      "initialSilence":"12m",
       "daySilenceInterval":"4h",
       "nightSilenceInterval":"6h",
       "useNightSilenceIntervalAtWeekend":true,
