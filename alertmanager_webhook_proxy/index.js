@@ -42,20 +42,27 @@ function forwardWebhook(req){
 }
 
 function postAlert(req, isFinish){
-    let data = [{
-        labels: {alertname: req.body.name, severity: req.body.severity, instance: req.body.instance},
-        annotations: {message: req.body.message},
-        generatorURL: req.body.url}];
-    if (isFinish){
-        logger.info("Finishing alert %s", req.body.name);
-        data[0].endsAt=new Date().toISOString();
-    }else{
-        data[0].annotations.lastIncident = new Date().toISOString();
-        logger.info("Posting new alert %s", req.body.name);
-    }
-    request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
+    request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "filter={alertname=\""+req.body.name+"\",severity=\""+req.body.severity+"\",instance=\""+req.body.severity+"\"}"}, function (error, response) {
         if (error) logger.log('error', error);
-        logger.info('statusCode: %s', response && response.statusCode);
+        const responseAlertmanager = JSON.parse(response.body);
+        let data = [{
+                labels: {alertname: req.body.name, severity: req.body.severity, instance: req.body.instance},
+                annotations: {message: req.body.message},
+                generatorURL: req.body.url}];
+        if (isFinish){
+            logger.info("Finishing alert %s", req.body.name);
+            data[0].endsAt=new Date().toISOString();
+        }else{
+            if (responseAlertmanager.length>0){
+                data[0].annotations.lastNotification = responseAlertmanager[0].annotations.lastNotification;
+            }
+            data[0].annotations.lastIncident = new Date().toISOString();
+            logger.info("Posting new alert %s", req.body.name);
+        }
+        request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
+            if (error) logger.log('error', error);
+            logger.info('statusCode: %s', response && response.statusCode);
+        });
     });
 }
 
