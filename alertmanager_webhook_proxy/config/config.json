@@ -1,18 +1,33 @@
 [
   {
-    "alertname":"libra-scanner-watchdog",
+    "alertname":"libra-watchdog",
     "ruleSet":{
-      "initialSilence":"10m",
+      "initialSilence":"6m",
       "daySilenceInterval":"4h",
       "nightSilenceInterval":"6h",
       "useNightSilenceIntervalAtWeekend":true,
       "daySilenceIntervalStart":"10:00",
+      "daySilenceIntervalFinish":"20:00",
+      "autoResolve":{
+        "enabled":false,
+      },
+      "sendResolved":true
+    }
+  },
+  {
+    "alertname":"jenkins-custom-test",
+    "ruleSet":{
+      "initialSilence":"0",
+      "daySilenceInterval":"4h",
+      "nightSilenceInterval":"6h",
+      "useNightSilenceIntervalAtWeekend":true,
+      "daySilenceIntervalStart":"10:00",
+      "daySilenceIntervalFinish":"20:00",
       "autoResolve":{
         "enabled":true,
         "interval":"10h"
       },
-      "daySilenceIntervalFinish":"20:00",
-      "sendResolved":true
+      "sendResolved":false
     }
   },
   {
