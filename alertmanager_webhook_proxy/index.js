@@ -42,7 +42,7 @@ function forwardWebhook(req){
 }
 
 function postAlert(req, isFinish){
-    request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "filter={alertname=\""+req.body.name+"\",severity=\""+req.body.severity+"\",instance=\""+req.body.severity+"\"}"}, function (error, response) {
+    request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true&filter={alertname=\""+req.body.name+"\",severity=\""+req.body.severity+"\",instance=\""+req.body.severity+"\"}"}, function (error, response) {
         if (error) logger.log('error', error);
         const responseAlertmanager = JSON.parse(response.body);
         let data = [{
