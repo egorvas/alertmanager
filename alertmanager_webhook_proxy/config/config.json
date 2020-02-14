@@ -9,9 +9,9 @@
       "daySilenceIntervalStart":"10:00",
       "daySilenceIntervalFinish":"20:00",
       "autoResolve":{
-        "enabled":false,
+        "enabled":true,
       },
-      "sendResolved":true
+      "sendResolved":false
     }
   },
   {
