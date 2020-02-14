@@ -22,7 +22,6 @@ services:
     mem_reservation: 100m
     networks:
       - alertmanager_default
-      - default-network
     ports:
       - 9094:8080
     restart: on-failure
@@ -36,6 +35,7 @@ services:
     restart: on-failure
     networks:
       - alertmanager_default
+      - default-network
     ports:
       - 9095:3000
     build:
