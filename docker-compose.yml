@@ -27,6 +27,8 @@ services:
     mem_limit: 300m
     mem_reservation: 100m
     restart: on-failure
+    networks:
+      - default-network
     ports:
       - 9095:3000
     build:
