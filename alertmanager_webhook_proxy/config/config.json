@@ -10,6 +10,7 @@
       "daySilenceIntervalFinish":"20:00",
       "autoResolve":{
         "enabled":true,
+        "interval":"16m"
       },
       "sendResolved":false
     }
