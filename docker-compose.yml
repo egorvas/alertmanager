@@ -2,6 +2,7 @@ version: '2.4'
 services:
   alertmanager:
     image: prom/alertmanager:latest
+    container_name: alertmanager
     cpu_percent: 5
     mem_limit: 500m
     networks:
@@ -14,6 +15,7 @@ services:
     restart: on-failure
   karma:
     image: lmierzwa/karma:latest
+    container_name: karma
     cpu_percent: 2
     mem_limit: 300m
     mem_reservation: 100m
@@ -23,6 +25,7 @@ services:
     environment:
         - ALERTMANAGER_URI=http://alertmanager:9093
   alertmanager-webhook-proxy:
+    container_name: alertmanager-webhook-proxy
     cpu_percent: 2
     mem_limit: 300m
     mem_reservation: 100m
@@ -38,6 +41,7 @@ services:
         - WEBHOOK_URL=http://alertmanager-bot:8080
         - ALERTMANAGER_URL=http://alertmanager:9093
   alertmanager-bot:
+    container_name: alertmanager-bot
     image: metalmatze/alertmanager-bot:0.4.2
     cpu_percent: 2
     mem_limit: 300m
