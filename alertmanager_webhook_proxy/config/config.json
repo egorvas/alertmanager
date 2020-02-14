@@ -12,6 +12,10 @@
         "enabled":true,
         "interval":"16m"
       },
+      "hardAutoResolve":{
+        "enabled":false,
+        "interval":"24h"
+      },
       "sendResolved":false
     }
   },
@@ -28,6 +32,10 @@
         "enabled":true,
         "interval":"10h"
       },
+      "hardAutoResolve":{
+        "enabled":false,
+        "interval":"24h"
+      },
       "sendResolved":false
     }
   },
@@ -43,6 +51,10 @@
       "autoResolve":{
         "enabled":true,
         "interval":"6m"
+      },
+      "hardAutoResolve":{
+        "enabled":false,
+        "interval":"24h"
       },
       "sendResolved":true
     }

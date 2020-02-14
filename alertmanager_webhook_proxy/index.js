@@ -28,6 +28,7 @@ const defaultRules = {"initialSilence": "10m",
     "daySilenceIntervalStart": "10:00:00",
     "daySilenceIntervalFinish": "23:00:00",
     "autoResolve": {"enabled": true, "interval": "10h"},
+    "hardAutoResolve": {"enabled": false, "interval": "24h"},
     "sendResolved": true};
 
 
@@ -49,6 +50,7 @@ function postAlert(req, isFinish){
         logger.info("Finishing alert %s", req.body.name);
         data[0].endsAt=new Date().toISOString();
     }else{
+        data[0].annotations.lastIncident = new Date().toISOString();
         logger.info("Posting new alert %s", req.body.name);
     }
     request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
@@ -131,6 +133,7 @@ app.post('/webhook', (req, res) => {
     const now = +Date.now();
     const alertName = req.body.commonLabels.alertname;
     const lastNotification = req.body.commonAnnotations.lastNotification;
+    const lastIncidentInMills = +Date.parse(req.body.commonAnnotations.lastIncident);
     const startAtInMills = +Date.parse(req.body.alerts[0].startsAt);
     const isLastNotificationExists = typeof lastNotification !== 'undefined' && lastNotification;
     const isFiring = req.body.status==="firing";
@@ -141,7 +144,8 @@ app.post('/webhook', (req, res) => {
 
 
     if (isFiring){
-        if (rules.autoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.autoResolve.interval)) < now){
+        if ((rules.hardAutoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.hardAutoResolve.interval)) < now) ||
+            (rules.autoResolve.enabled && (lastIncidentInMills + hmsToMilliSeconds(rules.autoResolve.interval)) < now)){
             finishAlert(req);
         }else{
             if (isLastNotificationExists){
