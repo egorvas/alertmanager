@@ -53,4 +53,6 @@ services:
       - ./local/alertmanager-bot/data:/data/
       - ./local/alertmanager-bot/templates:/templates
 networks:
+  default-network:
+    name: default-network
   default:
