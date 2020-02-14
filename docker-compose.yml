@@ -20,6 +20,9 @@ services:
     cpu_percent: 2
     mem_limit: 300m
     mem_reservation: 100m
+    networks:
+      - alertmanager_default
+      - default-network
     ports:
       - 9094:8080
     restart: on-failure
@@ -33,7 +36,6 @@ services:
     restart: on-failure
     networks:
       - alertmanager_default
-      - default-network
     ports:
       - 9095:3000
     build:
@@ -48,6 +50,8 @@ services:
     cpu_percent: 2
     mem_limit: 300m
     mem_reservation: 100m
+    networks:
+      - alertmanager_default
     restart: on-failure
     environment:
         - ALERTMANAGER_URL=http://alertmanager:9093
@@ -61,5 +65,5 @@ services:
 networks:
   default-network:
     name: default-network
-  default:
+  alertmanager_default:
     name: alertmanager_default
