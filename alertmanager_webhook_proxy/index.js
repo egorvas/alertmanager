@@ -42,7 +42,7 @@ function forwardWebhook(req){
 }
 
 function postAlert(req, isFinish){
-    if (typeof req.body.reason === 'undefined' || req.body.reason) req.body.reason = "Alert "+ req.body.name + " failed";
+    if (typeof req.body.reason === 'undefined' || req.body.reason) req.body.reason = req.body.name;
     request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true&filter={alertname=\""+req.body.name+"\",reason=\""+req.body.reason+"\",instance=\""+req.body.severity+"\"}"}, function (error, response) {
         if (error) logger.log('error', error);
         const responseAlertmanager = JSON.parse(response.body);
