@@ -49,6 +49,7 @@ function postAlert(req, isFinish){
                 labels: {alertname: req.body.name, severity: req.body.severity, instance: req.body.instance},
                 annotations: {message: req.body.message},
                 generatorURL: req.body.url}];
+
         if (isFinish){
             logger.info("Finishing alert %s", req.body.name);
             data[0].endsAt=new Date().toISOString();
@@ -59,10 +60,14 @@ function postAlert(req, isFinish){
             data[0].annotations.lastIncident = new Date().toISOString();
             logger.info("Posting new alert %s", req.body.name);
         }
-        request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
-            if (error) logger.log('error', error);
-            logger.info('statusCode: %s', response && response.statusCode);
-        });
+        if (isFinish && responseAlertmanager.length===0){
+            logger.info("No alert %s to finish", req.body.name);
+        }else{
+            request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
+                if (error) logger.log('error', error);
+                logger.info('statusCode: %s', response && response.statusCode);
+            });
+        }
     });
 }
 
