@@ -1,62 +1,25 @@
-[
+[  {
+    "name":"test",
+    "rules":{
+      "initialSilence":"1m30s",
+      "daySilenceInterval": "2m",
+      "nightSilenceInterval": "2m",
+      "autoResolve":{
+        "enabled":true,
+        "interval":"10m"
+      },
+      "sendResolved": true
+    }
+  },
   {
     "name":"libra-watchdog",
     "rules":{
-      "initialSilence":"12m",
-      "daySilenceInterval":"4h",
-      "nightSilenceInterval":"6h",
-      "useNightSilenceIntervalAtWeekend":true,
-      "daySilenceIntervalStart":"10:00",
-      "daySilenceIntervalFinish":"20:00",
+      "initialSilence":"11m",
       "autoResolve":{
         "enabled":true,
-        "interval":"16m"
-      },
-      "hardAutoResolve":{
-        "enabled":false,
-        "interval":"24h"
-      },
-      "sendResolved":false
-    }
-  },
-  {
-    "name":"jenkins-custom-test",
-    "rules":{
-      "initialSilence":"0",
-      "daySilenceInterval":"4h",
-      "nightSilenceInterval":"6h",
-      "useNightSilenceIntervalAtWeekend":true,
-      "daySilenceIntervalStart":"10:00",
-      "daySilenceIntervalFinish":"20:00",
-      "autoResolve":{
-        "enabled":false,
-        "interval":"25h"
-      },
-      "hardAutoResolve":{
-        "enabled":true,
-        "interval":"2m"
-      },
-      "sendResolved":false
-    }
-  },
-  {
-    "name":"test-alert",
-    "rules":{
-      "initialSilence":"1m30s",
-      "daySilenceInterval":"2m",
-      "nightSilenceInterval":"4m",
-      "useNightSilenceIntervalAtWeekend":true,
-      "daySilenceIntervalStart":"10:00",
-      "daySilenceIntervalFinish":"20:00",
-      "autoResolve":{
-        "enabled":true,
-        "interval":"6m"
-      },
-      "hardAutoResolve":{
-        "enabled":false,
-        "interval":"24h"
-      },
-      "sendResolved":true
+        "interval":"11m"
+      }
     }
   }
+
 ]
