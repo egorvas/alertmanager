@@ -21,7 +21,7 @@ const ALERT_MANAGER_URL = process.env.ALERTMANAGER_URL || "http://0.0.0.0:9093";
 const WEBHOOK_URL = process.env.WEBHOOK_URL || "http://0.0.0.0:8040";
 const PORT = process.env.PORT || 3000;
 
-const defaultRules = {"initialSilence": "10m",
+const defaultRules = {"initialSilence": "0",
     "daySilenceInterval": "2h",
     "nightSilenceInterval": "6h",
     "useNightSilenceIntervalAtWeekend": true,
@@ -34,41 +34,56 @@ const defaultRules = {"initialSilence": "10m",
 
 function forwardWebhook(req){
     logger.info("Forwarding webhook %s", req.body.commonLabels.alertname);
-    req.body.alerts[0].endsAt = new Date().toISOString();
     request.post(WEBHOOK_URL, {json: req.body, headers:  {"Content-type": "application/json"}}, function (error, response) {
         if (error) logger.log('error', error);
         logger.log('info', 'statusCode: %s', response && response.statusCode);
     });
 }
 
-function postAlert(req, isFinish){
-    if (typeof req.body.reason === 'undefined' || req.body.reason) req.body.reason = req.body.name;
-    request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true&filter={alertname=\""+req.body.name+"\",reason=\""+req.body.reason+"\",instance=\""+req.body.severity+"\"}"}, function (error, response) {
+function finishAlert(req){
+    logger.info("Finishing alert %s", req.body.name);
+    if (typeof req.body.rules === 'undefined' || req.body.rules) req.body.rules = "default";
+    request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true&filter={alertname=\""+req.body.name+"\",rules=\""+req.body.rules+"\",instance=\""+req.body.severity+"\"}"}, function (error, response) {
         if (error) logger.log('error', error);
-        const responseAlertmanager = JSON.parse(response.body);
-        let data = [{
-                labels: {alertname: req.body.name, reason: req.body.reason, instance: req.body.instance},
-                annotations: {message: req.body.message},
-                generatorURL: req.body.url}];
 
-        if (isFinish){
-            logger.info("Finishing alert %s", req.body.name);
-            data[0].endsAt=new Date().toISOString();
-        }else{
-            if (responseAlertmanager.length>0){
-                data[0].annotations.lastNotification = responseAlertmanager[0].annotations.lastNotification;
-            }
-            data[0].annotations.lastIncident = new Date().toISOString();
-            logger.info("Posting new alert %s", req.body.name);
-        }
-        if (isFinish && responseAlertmanager.length===0){
-            logger.info("No alert %s to finish", req.body.name);
-        }else{
+        const responseAlertmanager = JSON.parse(response.body);
+
+        if (responseAlertmanager.length===0){
+            logger.info("No alerts %s to finish", req.body.name);
+        }else {
+            let data = [{
+                labels: {alertname: req.body.name, rules: req.body.rules, instance: req.body.instance},
+                annotations: {message: req.body.message},
+                generatorURL: req.body.url,
+                endsAt: new Date().toISOString()}];
             request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
                 if (error) logger.log('error', error);
                 logger.info('statusCode: %s', response && response.statusCode);
             });
         }
+    });
+}
+
+function postAlert(req){
+    logger.info("Posting new alert %s", req.body.name);
+    if (typeof req.body.rules === 'undefined' || req.body.rules) req.body.rules = "default";
+    request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true&filter={alertname=\""+req.body.name+"\",rules=\""+req.body.rules+"\",instance=\""+req.body.severity+"\"}"}, function (error, response) {
+        if (error) logger.log('error', error);
+        const responseAlertmanager = JSON.parse(response.body);
+
+        let data = [{
+                labels: {alertname: req.body.name, rules: req.body.rules, instance: req.body.instance},
+                annotations: {message: req.body.message, lastIncident: new Date().toISOString()},
+                generatorURL: req.body.url}];
+
+        if (responseAlertmanager.length>0)
+            data[0].annotations.lastNotification = responseAlertmanager[0].annotations.lastNotification;
+
+        request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
+            if (error) logger.log('error', error);
+            logger.info('statusCode: %s', response && response.statusCode);
+        });
+
     });
 }
 
@@ -88,7 +103,7 @@ function updateAlertLastNotification(req){
     });
 }
 
-function finishAlert(req){
+function forceFinishAlert(req){
     logger.info("Finishing alert %s", req.body.commonLabels.alertname);
     let data = [{
         labels: req.body.alerts[0].labels,
@@ -135,9 +150,9 @@ function isDayTime(now, daySilenceIntervalStart, daySilenceIntervalFinish, useNi
     }
 }
 
-function getRules(alertName) {
-    const rules = config.find(o => o.alertname === alertName);
-    return (typeof rules !== "undefined" && rules) ? rules.ruleSet : defaultRules;
+function getRules(rulesName) {
+    const rule = config.find(o => o.name === rulesName);
+    return (typeof rule !== "undefined" && rule) ? rule.rules : defaultRules;
 }
 
 
@@ -150,7 +165,7 @@ app.post('/webhook', (req, res) => {
     const startAtInMills = +Date.parse(req.body.alerts[0].startsAt);
     const isLastNotificationExists = typeof lastNotification !== 'undefined' && lastNotification;
     const isFiring = req.body.status==="firing";
-    const rules = getRules(alertName);
+    const rules = getRules(req.body.commonLabels.rules);
     const notificationInterval = hmsToMilliSeconds(isDayTime(now,
         rules.daySilenceIntervalStart, rules.daySilenceIntervalFinish, rules.useNightSilenceIntervalAtWeekend) ?
         rules.daySilenceInterval : rules.nightSilenceInterval);
@@ -159,16 +174,18 @@ app.post('/webhook', (req, res) => {
     if (isFiring){
         if ((rules.hardAutoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.hardAutoResolve.interval)) < now) ||
             (rules.autoResolve.enabled && (lastIncidentInMills + hmsToMilliSeconds(rules.autoResolve.interval)) < now)){
-            finishAlert(req);
+            forceFinishAlert(req);
         }else{
             if (isLastNotificationExists){
                 if (lastNotification + notificationInterval < now){
+                    req.body.alerts[0].endsAt = new Date().toISOString(); //needs for correct duration value at the telegram
                     forwardWebhook(req); updateAlertLastNotification(req);
                 }else{
                     logger.info("Notification isn't sent because of default notification interval");
                 }
             }else{
                 if (startAtInMills + hmsToMilliSeconds(rules.initialSilence) < now){
+                    req.body.alerts[0].endsAt = new Date().toISOString(); //needs for correct duration value at the telegram
                     forwardWebhook(req); updateAlertLastNotification(req);
                 }else{
                     logger.info("Notification isn't sent because of initial notification interval");
@@ -186,13 +203,13 @@ app.post('/webhook', (req, res) => {
 
 app.post('/alertOk', (req, res) => {
     logger.info("Request to finish alert with data %s", JSON.stringify(req.body));
-    postAlert(req, true);
+    finishAlert(req);
     res.sendStatus(200);
 });
 
 app.post('/alertFail', (req, res) => {
     logger.info("Request to create new alert with data %s", JSON.stringify(req.body));
-    postAlert(req, false);
+    postAlert(req);
     res.sendStatus(200);
 });
 

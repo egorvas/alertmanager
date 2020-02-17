@@ -1,7 +1,7 @@
 [
   {
-    "alertname":"libra-watchdog",
-    "ruleSet":{
+    "name":"libra-watchdog",
+    "rules":{
       "initialSilence":"12m",
       "daySilenceInterval":"4h",
       "nightSilenceInterval":"6h",
@@ -20,8 +20,8 @@
     }
   },
   {
-    "alertname":"jenkins-custom-test",
-    "ruleSet":{
+    "name":"jenkins-custom-test",
+    "rules":{
       "initialSilence":"0",
       "daySilenceInterval":"4h",
       "nightSilenceInterval":"6h",
@@ -40,8 +40,8 @@
     }
   },
   {
-    "alertname":"test-alert",
-    "ruleSet":{
+    "name":"test-alert",
+    "rules":{
       "initialSilence":"1m30s",
       "daySilenceInterval":"2m",
       "nightSilenceInterval":"4m",

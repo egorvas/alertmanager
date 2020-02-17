@@ -1,10 +1,9 @@
 {{ define "telegram.default" }}
 {{ range .Alerts }}
 {{ if eq .Status "firing"}}🔥 <b>{{ .Status | toUpper }}</b> 🔥{{ else }}<b>{{ .Status | toUpper }}</b>{{ end }}
-<b>{{ .Labels.reason }}</b>
+<b>{{ .Labels.alertname }}</b>
 {{ .Annotations.message }}
 <b>Url:</b> {{ .GeneratorURL }}
-<b>Duration:</b> {{ duration .StartsAt .EndsAt }}{{ if ne .Status "firing"}}
-<b>Ended:</b> {{ .EndsAt }}{{ end }}
+<b>Duration:</b> {{ duration .StartsAt .EndsAt }}
 {{ end }}
 {{ end }}
