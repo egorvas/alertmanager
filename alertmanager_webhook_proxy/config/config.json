@@ -29,12 +29,12 @@
       "daySilenceIntervalStart":"10:00",
       "daySilenceIntervalFinish":"20:00",
       "autoResolve":{
-        "enabled":true,
+        "enabled":false,
         "interval":"25h"
       },
       "hardAutoResolve":{
-        "enabled":false,
-        "interval":"72h"
+        "enabled":true,
+        "interval":"2m"
       },
       "sendResolved":false
     }
