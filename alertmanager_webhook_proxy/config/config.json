@@ -1,9 +1,11 @@
 [  {
     "name":"test",
     "rules":{
-      "initialSilence":"1m30s",
-      "daySilenceInterval": "2m",
-      "nightSilenceInterval": "2m",
+      "repeat": {
+        "initialSilence": "1m30s",
+        "daySilenceInterval": "2m",
+        "nightSilenceInterval": "2m"
+      },
       "autoResolve":{
         "enabled":true,
         "interval":"10m"
@@ -14,11 +16,77 @@
   {
     "name":"libra-watchdog",
     "rules":{
-      "initialSilence":"11m",
+      "initialSilence":{
+        "enabled": true,
+        "interval": "6m"
+      },
       "autoResolve":{
         "enabled":true,
         "interval":"11m"
       }
+    }
+  },
+  {
+    "name":"stablecoin-watchdog-norepeat",
+    "rules":{
+      "initialSilence":{
+        "enabled": false
+      },
+      "autoResolve":{
+        "enabled":false
+      },
+      "repeat": {
+        "enabled":false
+      },
+      "sendResolved": true
+    }
+  },
+  {
+    "name":"stablecoin-watchdog-low",
+    "rules":{
+      "initialSilence":{
+        "enabled": false
+      },
+      "autoResolve":{
+        "enabled":false
+      },
+      "repeat":{
+        "daySilenceInterval": "4h",
+        "nightSilenceInterval": "15h"
+      },
+      "sendResolved": true
+    }
+  },
+  {
+    "name":"stablecoin-watchdog-mid",
+    "rules":{
+      "initialSilence":{
+        "enabled": false
+      },
+      "autoResolve":{
+        "enabled":false
+      },
+      "repeat":{
+        "daySilenceInterval": "2h",
+        "nightSilenceInterval": "15h"
+      },
+      "sendResolved": true
+    }
+  },
+  {
+    "name":"stablecoin-watchdog-high",
+    "rules":{
+      "initialSilence":{
+        "enabled": false
+      },
+      "autoResolve":{
+        "enabled":false
+      },
+      "repeat":{
+        "daySilenceInterval": "1h",
+        "nightSilenceInterval": "8h"
+      },
+      "sendResolved": true
     }
   }
 

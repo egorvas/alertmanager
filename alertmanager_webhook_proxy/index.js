@@ -2,9 +2,10 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const request = require('request');
 const moment = require('moment');
-const app = express().use(bodyParser.json());
-const config = require('./config/config.json');
+const { body, validationResult } = require('express-validator');
 const { createLogger, format, transports,  } = require('winston');
+
+const config = require('./config/config.json');
 const logger = createLogger({
     format: format.combine(
         format.timestamp(),
@@ -16,28 +17,56 @@ const logger = createLogger({
         new transports.Console()
     ]
 });
+const app = express().use(bodyParser.json());
 
 const ALERT_MANAGER_URL = process.env.ALERTMANAGER_URL || "http://0.0.0.0:9093";
 const WEBHOOK_URL = process.env.WEBHOOK_URL || "http://0.0.0.0:8080";
 const PORT = process.env.PORT || 3000;
-const defaultRules = {"initialSilence": "0",
-    "daySilenceInterval": "2h",
-    "nightSilenceInterval": "8h",
-    "useNightSilenceIntervalAtWeekend": true,
-    "daySilenceIntervalStart": "10:00:00",
-    "daySilenceIntervalFinish": "23:00:00",
-    "autoResolve": {"enabled": true, "interval": "1m"},
-    "hardAutoResolve": {"enabled": false, "interval": "24h"},
+
+const defaultAlertRules = {
+    "initialSilence": {
+        "enabled": false,
+        "interval": "10m"
+    },
+    "repeat": {
+        "enabled": true,
+        "daySilenceInterval": "2h",
+        "nightSilenceInterval": "8h",
+        "useNightSilenceIntervalAtWeekend": true,
+        "daySilenceIntervalStart": "10:00:00",
+        "daySilenceIntervalFinish": "23:00:00"
+    },
+    "autoResolve": {
+        "enabled": true,
+        "interval": "1m"
+    },
+    "hardAutoResolve": {
+        "enabled": false,
+        "interval": "24h"
+    },
     "sendResolved": false,
     "routes": [WEBHOOK_URL]};
 
 
+const requestOkRules = [
+    body('name').isString().isLength({ min: 3 }).withMessage('Must be a string with minimum 3 symbols'),
+    body('instance').isString().isLength({ min: 1 }).withMessage('Must be a string with minimum 1 symbol'),
+    body("rules").if(body("rules").not().isIn(['default', null])).isIn(config.map(x => x.name)).withMessage('Rule not found')
+];
+
+const requestFailRules = [
+    body('name').isString().isLength({ min: 3 }).withMessage('Must be a string with minimum 3 symbols'),
+    body('instance').isString().isLength({ min: 1 }).withMessage('Must be a string with minimum 1 symbol'),
+    body('message').isString().isLength({ min: 3 }).withMessage('Must be a string with minimum 3 symbols'),
+    body("url").if(body("url").exists()).isURL().withMessage('Must be valid url'),
+    body("rules").if(body("rules").not().isIn(['default', null])).isIn(config.map(x => x.name)).withMessage('Rule not found')
+];
+
 function forwardWebhook(req, routes){
     logger.info("Forwarding webhook %s", req.body.commonLabels.alertname);
     routes.forEach(route => {
-        request.post(route, {json: req.body, headers:  {"Content-type": "application/json"}}, function (error, response) {
+        request.post(route, {json: req.body, headers:  {"Content-type": "application/json"}}, function (error) {
             if (error) logger.log('error', error);
-            logger.log('info', 'statusCode: %s', response && response.statusCode);
         });
     });
 }
@@ -45,10 +74,12 @@ function forwardWebhook(req, routes){
 function finishAlert(req){
     logger.info("Finishing alert %s", req.body.name);
     if (typeof req.body.rules === 'undefined' || req.body.rules) req.body.rules = "default";
-    request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true&filter={alertname=\""+req.body.name+"\",rules=\""+req.body.rules+"\",instance=\""+req.body.instance+"\"}"}, function (error, response) {
+    request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true"}, function (error, response) {
         if (error) logger.log('error', error);
-
-        if (JSON.parse(response.body).length===0){
+        if (JSON.parse(response.body).filter(alert =>
+            alert.labels.alertname === req.body.name &&
+            alert.labels.rules === req.body.rules &&
+            alert.labels.instance === req.body.instance).length===0){
             logger.info("No alerts %s to finish", req.body.name);
         }else {
             let data = [{
@@ -56,9 +87,8 @@ function finishAlert(req){
                 annotations: {message: req.body.message},
                 generatorURL: req.body.url,
                 endsAt: new Date().toISOString()}];
-            request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
+            request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error) {
                 if (error) logger.log('error', error);
-                logger.info('statusCode: %s', response && response.statusCode);
             });
         }
     });
@@ -67,21 +97,26 @@ function finishAlert(req){
 function postAlert(req){
     logger.info("Posting new alert %s", req.body.name);
     if (typeof req.body.rules === 'undefined' || !req.body.rules) req.body.rules = "default";
-    request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true&filter={alertname=\""+req.body.name+"\",rules=\""+req.body.rules+"\",instance=\""+req.body.instance+"\"}"}, function (error, response) {
+    request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true"}, function (error, response) {
         if (error) logger.log('error', error);
+
         const responseAlertmanager = JSON.parse(response.body);
 
         let data = [{
                 labels: {alertname: req.body.name, rules: req.body.rules, instance: req.body.instance},
-                annotations: {message: req.body.message, lastIncident: new Date().toISOString()},
+                annotations: {message: req.body.message, lastIncident: new Date().toISOString(), count: "1"},
                 generatorURL: req.body.url}];
 
-        if (responseAlertmanager.length>0)
-            data[0].annotations.lastNotification = responseAlertmanager[0].annotations.lastNotification;
+        if (responseAlertmanager.filter(alert =>
+            alert.labels.alertname === req.body.name &&
+            alert.labels.rules === req.body.rules &&
+            alert.labels.instance === req.body.instance).length>0) {
+                data[0].annotations.lastNotification = responseAlertmanager[0].annotations.lastNotification;
+                data[0].annotations.count = (parseInt(responseAlertmanager[0].annotations.count) + 1).toString();
+        }
 
         request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
             if (error) logger.log('error', error);
-            logger.info('statusCode: %s', response && response.statusCode);
         });
 
     });
@@ -97,9 +132,8 @@ function updateAlertLastNotification(req){
         generatorURL: req.body.alerts[0].generatorURL
     }];
     data[0].annotations.lastNotification =  timeNow;
-    request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
+    request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error) {
         if (error) logger.log('error', error);
-        logger.info('statusCode: %s', response && response.statusCode);
     });
 }
 
@@ -112,9 +146,8 @@ function forceFinishAlert(req){
         endsAt: new Date().toISOString(),
         generatorURL: req.body.alerts[0].generatorURL
     }];
-    request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
+    request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error) {
         if (error) logger.log('error', error);
-        logger.info('statusCode: %s', response && response.statusCode);
     });
 }
 
@@ -151,7 +184,7 @@ function isDayTime(now, daySilenceIntervalStart, daySilenceIntervalFinish, useNi
 }
 
 function getRules(rulesName) {
-    let rules = defaultRules;
+    let rules = defaultAlertRules;
     const ruleFromConfig = config.find(o => o.name === rulesName);
     if (typeof ruleFromConfig !== "undefined" && ruleFromConfig){
         Object.keys(ruleFromConfig.rules).forEach(function(key) {
@@ -160,6 +193,13 @@ function getRules(rulesName) {
     }
     return rules;
 }
+
+
+app.use(function(err, req, res, next) {
+    if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
+        return res.status(400).json({ result: "error", errors: [{msg: "Invalid JSON", location: "body"}] });
+    } else next();
+});
 
 app.post('/webhook', (req, res) => {
     logger.info("Get new webhook with data %s", JSON.stringify(req.body));
@@ -172,8 +212,8 @@ app.post('/webhook', (req, res) => {
     const isFiring = req.body.status==="firing";
     const rules = getRules(req.body.commonLabels.rules);
     const notificationInterval = hmsToMilliSeconds(isDayTime(now,
-        rules.daySilenceIntervalStart, rules.daySilenceIntervalFinish, rules.useNightSilenceIntervalAtWeekend) ?
-        rules.daySilenceInterval : rules.nightSilenceInterval);
+        rules.repeat.daySilenceIntervalStart, rules.repeat.daySilenceIntervalFinish, rules.repeat.useNightSilenceIntervalAtWeekend) ?
+        rules.repeat.daySilenceInterval : rules.repeat.nightSilenceInterval);
 
     if (isFiring){
         if ((rules.hardAutoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.hardAutoResolve.interval)) < now) ||
@@ -181,14 +221,14 @@ app.post('/webhook', (req, res) => {
             forceFinishAlert(req);
         }else{
             if (isLastNotificationExists){
-                if (+Date.parse(lastNotification) + notificationInterval < now){
+                if (rules.repeat.enabled && +Date.parse(lastNotification) + notificationInterval < now){
                     req.body.alerts[0].endsAt = new Date().toISOString(); //needs for correct duration value at the telegram
                     forwardWebhook(req, rules.routes); updateAlertLastNotification(req);
                 }else{
                     logger.info("Notification for alert %s isn't sent because of default notification interval", alertName);
                 }
             }else{
-                if (startAtInMills + hmsToMilliSeconds(rules.initialSilence) < now){
+                if (!rules.initialSilence.enabled || rules.initialSilence.enabled && startAtInMills + hmsToMilliSeconds(rules.initialSilence.interval) < now){
                     req.body.alerts[0].endsAt = new Date().toISOString(); //needs for correct duration value at the telegram
                     forwardWebhook(req, rules.routes); updateAlertLastNotification(req);
                 }else{
@@ -201,20 +241,29 @@ app.post('/webhook', (req, res) => {
         if (rules.sendResolved) forwardWebhook(req);
     }
 
-
-    res.sendStatus(200);
+    res.status(200).json({ result: 'ok' });
 });
 
-app.post('/alertOk', (req, res) => {
+app.post('/alertOk',requestOkRules, (req, res) => {
     logger.info("Request to finish alert with data %s", JSON.stringify(req.body));
-    finishAlert(req);
-    res.sendStatus(200);
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ result: "error", errors: errors.array() });
+    }else{
+        finishAlert(req);
+        res.status(200).json({ result: 'ok' });
+    }
 });
 
-app.post('/alertFail', (req, res) => {
-    logger.info("Request to create new alert with data %s", JSON.stringify(req.body));
-    postAlert(req);
-    res.sendStatus(200);
+app.post('/alertFail',requestFailRules, (req, res) => {
+    logger.info("Request to post alert with data %s", JSON.stringify(req.body));
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ result: "error", errors: errors.array() });
+    }else{
+        postAlert(req);
+        res.status(200).json({ result: 'ok' });
+    }
 });
 
 app.listen(PORT, () =>  logger.info("Starting server") );

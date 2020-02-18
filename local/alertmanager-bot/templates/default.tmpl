@@ -3,7 +3,8 @@
 {{ if eq .Status "firing"}}🔥 <b>{{ .Status | toUpper }}</b> 🔥{{ else }}<b>{{ .Status | toUpper }}</b>{{ end }}
 <b>{{ .Labels.alertname }}</b>
 {{ .Annotations.message }}
-<b>Url:</b> {{ .GeneratorURL }}
-<b>Duration:</b> {{ duration .StartsAt .EndsAt }}
+<b>Count:</b> {{ .Annotations.count }}
+{{ if ne .GeneratorURL ""}}<b>Url:</b> {{ .GeneratorURL }}{{ end }}
+{{ if ne .Annotations.count "1"}}<b>Duration:</b> {{ duration .StartsAt .EndsAt }}{{ end }}
 {{ end }}
 {{ end }}
