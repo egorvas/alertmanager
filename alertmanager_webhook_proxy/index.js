@@ -50,8 +50,7 @@ const defaultAlertRules = {
 
 const requestOkRules = [
     body('name').isString().isLength({ min: 3 }).withMessage('Must be a string with minimum 3 symbols'),
-    body('instance').isString().isLength({ min: 1 }).withMessage('Must be a string with minimum 1 symbol'),
-    body("rules").if(body("rules").not().isIn(['default', null])).isIn(config.map(x => x.name)).withMessage('Rule not found')
+    body('instance').isString().isLength({ min: 1 }).withMessage('Must be a string with minimum 1 symbol')
 ];
 
 const requestFailRules = [
@@ -72,20 +71,21 @@ function forwardWebhook(req, routes){
 }
 
 function finishAlert(req){
-    logger.info("Finishing alert %s", req.body.name);
-    if (typeof req.body.rules === 'undefined' || req.body.rules) req.body.rules = "default";
+    if (typeof req.body.rules === 'undefined' || !req.body.rules) req.body.rules = "default";
     request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true"}, function (error, response) {
         if (error) logger.log('error', error);
-        if (JSON.parse(response.body).filter(alert =>
+        const responseObject = JSON.parse(response.body);
+        if (responseObject.filter(alert =>
             alert.labels.alertname === req.body.name &&
-            alert.labels.rules === req.body.rules &&
             alert.labels.instance === req.body.instance).length===0){
             logger.info("No alerts %s to finish", req.body.name);
         }else {
+            logger.info("Finishing alert %s", req.body.name);
+            console.log();
             let data = [{
-                labels: {alertname: req.body.name, rules: req.body.rules, instance: req.body.instance},
-                annotations: {message: req.body.message},
-                generatorURL: req.body.url,
+                labels: responseObject[0].labels,
+                annotations: responseObject[0].annotations,
+                generatorURL: responseObject[0].generatorURL,
                 endsAt: new Date().toISOString()}];
             request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error) {
                 if (error) logger.log('error', error);
@@ -103,13 +103,12 @@ function postAlert(req){
         const responseAlertmanager = JSON.parse(response.body);
 
         let data = [{
-                labels: {alertname: req.body.name, rules: req.body.rules, instance: req.body.instance},
-                annotations: {message: req.body.message, lastIncident: new Date().toISOString(), count: "1"},
+                labels: {alertname: req.body.name, instance: req.body.instance},
+                annotations: {message: req.body.message, lastIncident: new Date().toISOString(), count: "1", rules: req.body.rules,},
                 generatorURL: req.body.url}];
 
         if (responseAlertmanager.filter(alert =>
             alert.labels.alertname === req.body.name &&
-            alert.labels.rules === req.body.rules &&
             alert.labels.instance === req.body.instance).length>0) {
                 data[0].annotations.lastNotification = responseAlertmanager[0].annotations.lastNotification;
                 data[0].annotations.count = (parseInt(responseAlertmanager[0].annotations.count) + 1).toString();
@@ -210,10 +209,7 @@ app.post('/webhook', (req, res) => {
     const startAtInMills = +Date.parse(req.body.alerts[0].startsAt);
     const isLastNotificationExists = typeof lastNotification !== 'undefined' && lastNotification;
     const isFiring = req.body.status==="firing";
-    const rules = getRules(req.body.commonLabels.rules);
-    const notificationInterval = hmsToMilliSeconds(isDayTime(now,
-        rules.repeat.daySilenceIntervalStart, rules.repeat.daySilenceIntervalFinish, rules.repeat.useNightSilenceIntervalAtWeekend) ?
-        rules.repeat.daySilenceInterval : rules.repeat.nightSilenceInterval);
+    const rules = getRules(req.body.commonAnnotations.rules);
 
     if (isFiring){
         if ((rules.hardAutoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.hardAutoResolve.interval)) < now) ||
@@ -221,11 +217,16 @@ app.post('/webhook', (req, res) => {
             forceFinishAlert(req);
         }else{
             if (isLastNotificationExists){
-                if (rules.repeat.enabled && +Date.parse(lastNotification) + notificationInterval < now){
-                    req.body.alerts[0].endsAt = new Date().toISOString(); //needs for correct duration value at the telegram
-                    forwardWebhook(req, rules.routes); updateAlertLastNotification(req);
-                }else{
-                    logger.info("Notification for alert %s isn't sent because of default notification interval", alertName);
+                if (rules.repeat.enabled){
+                    const notificationInterval = hmsToMilliSeconds(isDayTime(now,
+                        rules.repeat.daySilenceIntervalStart, rules.repeat.daySilenceIntervalFinish, rules.repeat.useNightSilenceIntervalAtWeekend) ?
+                        rules.repeat.daySilenceInterval : rules.repeat.nightSilenceInterval);
+                    if (+Date.parse(lastNotification) + notificationInterval < now){
+                        req.body.alerts[0].endsAt = new Date().toISOString(); //needs for correct duration value at the telegram
+                        forwardWebhook(req, rules.routes); updateAlertLastNotification(req);
+                    }else{
+                        logger.info("Notification for alert %s isn't sent because of default notification interval", alertName);
+                    }
                 }
             }else{
                 if (!rules.initialSilence.enabled || rules.initialSilence.enabled && startAtInMills + hmsToMilliSeconds(rules.initialSilence.interval) < now){
@@ -238,7 +239,7 @@ app.post('/webhook', (req, res) => {
         }
 
     }else{
-        if (rules.sendResolved) forwardWebhook(req);
+        if (rules.sendResolved) forwardWebhook(req, rules.routes);
     }
 
     res.status(200).json({ result: 'ok' });
