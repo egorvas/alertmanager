@@ -208,8 +208,8 @@ app.post('/webhook', (req, res) => {
     const isFiring = req.body.status==="firing";
     const rules = getRules(req.body.commonAnnotations.rules);
 
-    if ((rules.hardAutoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.hardAutoResolve.interval)) < now) ||
-        (rules.autoResolve.enabled && (lastIncidentInMills + hmsToMilliSeconds(rules.autoResolve.interval)) < now)){
+    if ((isFiring && rules.hardAutoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.hardAutoResolve.interval)) < now) ||
+        (isFiring && rules.autoResolve.enabled && (lastIncidentInMills + hmsToMilliSeconds(rules.autoResolve.interval)) < now)){
         forceFinishAlert(req);
     }else{
         if (rules.initialSilence.enabled && startAtInMills + hmsToMilliSeconds(rules.initialSilence.interval) < now){
