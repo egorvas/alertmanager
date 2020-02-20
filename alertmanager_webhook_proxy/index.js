@@ -208,35 +208,34 @@ app.post('/webhook', (req, res) => {
     const isFiring = req.body.status==="firing";
     const rules = getRules(req.body.commonAnnotations.rules);
 
-    if (isFiring){
-        if ((rules.hardAutoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.hardAutoResolve.interval)) < now) ||
-            (rules.autoResolve.enabled && (lastIncidentInMills + hmsToMilliSeconds(rules.autoResolve.interval)) < now)){
-            forceFinishAlert(req);
+    if ((rules.hardAutoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.hardAutoResolve.interval)) < now) ||
+        (rules.autoResolve.enabled && (lastIncidentInMills + hmsToMilliSeconds(rules.autoResolve.interval)) < now)){
+        forceFinishAlert(req);
+    }else{
+        if (rules.initialSilence.enabled && startAtInMills + hmsToMilliSeconds(rules.initialSilence.interval) < now){
+            logger.info("Notification for alert %s isn't sent because of initial notification interval", alertName);
         }else{
-            if (isLastNotificationExists){
-                if (rules.repeat.enabled){
-                    const notificationInterval = hmsToMilliSeconds(isDayTime(now,
-                        rules.repeat.daySilenceIntervalStart, rules.repeat.daySilenceIntervalFinish, rules.repeat.useNightSilenceIntervalAtWeekend) ?
-                        rules.repeat.daySilenceInterval : rules.repeat.nightSilenceInterval);
-                    if (+Date.parse(lastNotification) + notificationInterval < now){
-                        req.body.alerts[0].endsAt = new Date().toISOString(); //needs for correct duration value at the telegram
-                        forwardWebhook(req, rules.routes); updateAlertLastNotification(req);
-                    }else{
-                        logger.info("Notification for alert %s isn't sent because of default notification interval", alertName);
+            if (isFiring){
+                if (isLastNotificationExists){
+                    if (rules.repeat.enabled){
+                        const notificationInterval = hmsToMilliSeconds(isDayTime(now,
+                            rules.repeat.daySilenceIntervalStart, rules.repeat.daySilenceIntervalFinish, rules.repeat.useNightSilenceIntervalAtWeekend) ?
+                            rules.repeat.daySilenceInterval : rules.repeat.nightSilenceInterval);
+                        if (+Date.parse(lastNotification) + notificationInterval < now){
+                            req.body.alerts[0].endsAt = new Date().toISOString(); //needs for correct duration value at the telegram
+                            forwardWebhook(req, rules.routes); updateAlertLastNotification(req);
+                        }else{
+                            logger.info("Notification for alert %s isn't sent because of default notification interval", alertName);
+                        }
                     }
-                }
-            }else{
-                if (!rules.initialSilence.enabled || rules.initialSilence.enabled && startAtInMills + hmsToMilliSeconds(rules.initialSilence.interval) < now){
+                }else{
                     req.body.alerts[0].endsAt = new Date().toISOString(); //needs for correct duration value at the telegram
                     forwardWebhook(req, rules.routes); updateAlertLastNotification(req);
-                }else{
-                    logger.info("Notification for alert %s isn't sent because of initial notification interval", alertName);
                 }
+            }else{
+                if (rules.sendResolved) forwardWebhook(req, rules.routes);
             }
         }
-
-    }else{
-        if (rules.sendResolved) forwardWebhook(req, rules.routes);
     }
 
     res.status(200).json({ result: 'ok' });

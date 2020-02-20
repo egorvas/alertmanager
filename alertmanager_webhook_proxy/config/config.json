@@ -34,7 +34,7 @@
     "rules":{
       "initialSilence":{
         "enabled": true,
-        "interval": "6m"
+        "interval": "11m"
       },
       "autoResolve":{
         "enabled":false
@@ -50,7 +50,7 @@
     "rules":{
       "initialSilence":{
         "enabled": true,
-        "interval": "6m"
+        "interval": "11m"
       },
       "autoResolve":{
         "enabled":false
@@ -67,7 +67,7 @@
     "rules":{
       "initialSilence":{
         "enabled": true,
-        "interval": "6m"
+        "interval": "11m"
       },
       "autoResolve":{
         "enabled":false
@@ -84,7 +84,7 @@
     "rules":{
       "initialSilence":{
         "enabled": true,
-        "interval": "6m"
+        "interval": "11m"
       },
       "autoResolve":{
         "enabled":false
