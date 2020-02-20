@@ -75,13 +75,12 @@ function finishAlert(req){
     request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true"}, function (error, response) {
         if (error) logger.log('error', error);
         const responseObject = JSON.parse(response.body);
-        if (responseObject.filter(alert =>
+        if (typeof responseObject.find(alert =>
             alert.labels.alertname === req.body.name &&
-            alert.labels.instance === req.body.instance).length===0){
+            alert.labels.instance === req.body.instance)==="undefined"){
             logger.info("No alerts %s to finish", req.body.name);
         }else {
             logger.info("Finishing alert %s", req.body.name);
-            console.log();
             let data = [{
                 labels: responseObject[0].labels,
                 annotations: responseObject[0].annotations,
@@ -99,19 +98,17 @@ function postAlert(req){
     if (typeof req.body.rules === 'undefined' || !req.body.rules) req.body.rules = "default";
     request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true"}, function (error, response) {
         if (error) logger.log('error', error);
-
         const responseAlertmanager = JSON.parse(response.body);
-
         let data = [{
                 labels: {alertname: req.body.name, instance: req.body.instance},
-                annotations: {message: req.body.message, lastIncident: new Date().toISOString(), count: "1", rules: req.body.rules,},
+                annotations: {message: req.body.message, lastIncident: new Date().toISOString(), count: "1", rules: req.body.rules},
                 generatorURL: req.body.url}];
 
-        if (responseAlertmanager.filter(alert =>
-            alert.labels.alertname === req.body.name &&
-            alert.labels.instance === req.body.instance).length>0) {
-                data[0].annotations.lastNotification = responseAlertmanager[0].annotations.lastNotification;
-                data[0].annotations.count = (parseInt(responseAlertmanager[0].annotations.count) + 1).toString();
+        const filteredAlert = responseAlertmanager.find(alert => alert.labels.alertname === req.body.name && alert.labels.instance === req.body.instance);
+        if (typeof filteredAlert !== "undefined") {
+            console.log((parseInt(filteredAlert.annotations.count) + 1).toString());
+                data[0].annotations.lastNotification = filteredAlert.annotations.lastNotification;
+                data[0].annotations.count = (parseInt(filteredAlert.annotations.count) + 1).toString();
         }
 
         request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
