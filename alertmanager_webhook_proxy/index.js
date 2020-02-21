@@ -207,12 +207,11 @@ app.post('/webhook', (req, res) => {
     const isLastNotificationExists = typeof lastNotification !== 'undefined' && lastNotification;
     const isFiring = req.body.status==="firing";
     const rules = getRules(req.body.commonAnnotations.rules);
-
     if ((isFiring && rules.hardAutoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.hardAutoResolve.interval)) < now) ||
         (isFiring && rules.autoResolve.enabled && (lastIncidentInMills + hmsToMilliSeconds(rules.autoResolve.interval)) < now)){
         forceFinishAlert(req);
     }else{
-        if (rules.initialSilence.enabled && startAtInMills + hmsToMilliSeconds(rules.initialSilence.interval) < now){
+        if (rules.initialSilence.enabled && startAtInMills + hmsToMilliSeconds(rules.initialSilence.interval) > now){
             logger.info("Notification for alert %s isn't sent because of initial notification interval", alertName);
         }else{
             if (isFiring){

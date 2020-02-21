@@ -1,5 +1,5 @@
 global:
-  resolve_timeout: 168h
+  resolve_timeout: 1y
   # The smarthost and SMTP sender used for mail notifications.
   smtp_smarthost: 'localhost:25'
   smtp_from: 'alertmanager@example.org'
@@ -60,4 +60,4 @@ receivers:
 - name: 'alertmananger-bot'
   webhook_configs:
   - send_resolved: true
-    url: 'http://alertmanager-webhook-proxy:3000/webhook'
+    url: 'http://192.168.1.104:3000/webhook'
