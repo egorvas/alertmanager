@@ -75,9 +75,9 @@ function finishAlert(req){
     request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true"}, function (error, response) {
         if (error) logger.log('error', error);
         const responseObject = JSON.parse(response.body);
-        if (typeof responseObject.find(alert =>
+        if (responseObject.find(alert =>
             alert.labels.alertname === req.body.name &&
-            alert.labels.instance === req.body.instance)==="undefined"){
+            alert.labels.instance === req.body.instance)===undefined){
             logger.info("No alerts %s to finish", req.body.name);
         }else {
             logger.info("Finishing alert %s", req.body.name);
@@ -105,8 +105,7 @@ function postAlert(req){
                 generatorURL: req.body.url}];
 
         const filteredAlert = responseAlertmanager.find(alert => alert.labels.alertname === req.body.name && alert.labels.instance === req.body.instance);
-        if (typeof filteredAlert !== "undefined") {
-            console.log((parseInt(filteredAlert.annotations.count) + 1).toString());
+        if (filteredAlert !== undefined) {
                 data[0].annotations.lastNotification = filteredAlert.annotations.lastNotification;
                 data[0].annotations.count = (parseInt(filteredAlert.annotations.count) + 1).toString();
         }
@@ -180,9 +179,9 @@ function isDayTime(now, daySilenceIntervalStart, daySilenceIntervalFinish, useNi
 }
 
 function getRules(rulesName) {
-    let rules = defaultAlertRules;
+    let rules = JSON.parse(JSON.stringify(defaultAlertRules));
     const ruleFromConfig = config.find(o => o.name === rulesName);
-    if (typeof ruleFromConfig !== "undefined" && ruleFromConfig){
+    if (ruleFromConfig !== undefined && ruleFromConfig){
         Object.keys(ruleFromConfig.rules).forEach(function(key) {
             rules[key] = ruleFromConfig.rules[key];
         });
@@ -204,7 +203,7 @@ app.post('/webhook', (req, res) => {
     const lastNotification = req.body.commonAnnotations.lastNotification;
     const lastIncidentInMills = +Date.parse(req.body.commonAnnotations.lastIncident);
     const startAtInMills = +Date.parse(req.body.alerts[0].startsAt);
-    const isLastNotificationExists = typeof lastNotification !== 'undefined' && lastNotification;
+    const isLastNotificationExists = lastNotification !== undefined && lastNotification;
     const isFiring = req.body.status==="firing";
     const rules = getRules(req.body.commonAnnotations.rules);
     if ((isFiring && rules.hardAutoResolve.enabled && (startAtInMills + hmsToMilliSeconds(rules.hardAutoResolve.interval)) < now) ||
@@ -212,7 +211,7 @@ app.post('/webhook', (req, res) => {
         forceFinishAlert(req);
     }else{
         if (rules.initialSilence.enabled && startAtInMills + hmsToMilliSeconds(rules.initialSilence.interval) > now){
-            logger.info("Notification for alert %s isn't sent because of initial notification interval", alertName);
+            logger.info("Notification for alert %s didn't send because of initial notification interval", alertName);
         }else{
             if (isFiring){
                 if (isLastNotificationExists){
@@ -224,7 +223,7 @@ app.post('/webhook', (req, res) => {
                             req.body.alerts[0].endsAt = new Date().toISOString(); //needs for correct duration value at the telegram
                             forwardWebhook(req, rules.routes); updateAlertLastNotification(req);
                         }else{
-                            logger.info("Notification for alert %s isn't sent because of default notification interval", alertName);
+                            logger.info("Notification for alert %s didn't send because of default notification interval", alertName);
                         }
                     }
                 }else{
