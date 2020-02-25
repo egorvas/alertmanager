@@ -85,6 +85,7 @@ function finishAlert(req){
                 labels: responseObject[0].labels,
                 annotations: responseObject[0].annotations,
                 generatorURL: responseObject[0].generatorURL,
+                startsAt: responseObject[0].startsAt,
                 endsAt: new Date().toISOString()}];
             request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error) {
                 if (error) logger.log('error', error);
