@@ -26,7 +26,8 @@
       "autoResolve":{
         "enabled":true,
         "interval":"11m"
-      }
+      },
+      "sendResolved": true
     }
   },
   {

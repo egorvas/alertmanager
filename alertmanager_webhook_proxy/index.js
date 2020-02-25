@@ -71,7 +71,7 @@ function forwardWebhook(req, routes){
 }
 
 function finishAlert(req){
-    if (typeof req.body.rules === 'undefined' || !req.body.rules) req.body.rules = "default";
+    if (req.body.rules === undefined || !req.body.rules) req.body.rules = "default";
     request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true"}, function (error, response) {
         if (error) logger.log('error', error);
         const responseObject = JSON.parse(response.body);
@@ -95,7 +95,7 @@ function finishAlert(req){
 
 function postAlert(req){
     logger.info("Posting new alert %s", req.body.name);
-    if (typeof req.body.rules === 'undefined' || !req.body.rules) req.body.rules = "default";
+    if (req.body.rules === undefined || !req.body.rules) req.body.rules = "default";
     request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true"}, function (error, response) {
         if (error) logger.log('error', error);
         const responseAlertmanager = JSON.parse(response.body);
@@ -110,7 +110,7 @@ function postAlert(req){
                 data[0].annotations.count = (parseInt(filteredAlert.annotations.count) + 1).toString();
         }
 
-        request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error, response) {
+        request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error) {
             if (error) logger.log('error', error);
         });
 
