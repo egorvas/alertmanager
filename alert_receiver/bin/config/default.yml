@@ -1,0 +1,10 @@
+swaggerPath: ../schema/swagger/api.yaml
+metric:
+  metricPrefix: alertmanager-receiver
+  isDebug: true
+logger:
+  level: debug
+  transports:
+    - type: Console
+app:
+  port: 4000

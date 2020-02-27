@@ -27,8 +27,22 @@ services:
     restart: on-failure
     environment:
         - ALERTMANAGER_URI=http://alertmanager:9093
-  alertmanager-webhook-proxy:
-    container_name: alertmanager-webhook-proxy
+  alert-filter:
+    container_name: alert-filter
+    cpu_percent: 2
+    mem_limit: 300m
+    mem_reservation: 100m
+    restart: on-failure
+    networks:
+      - alertmanager_default
+    build:
+      context: alert_filter
+      dockerfile: Dockerfile
+    environment:
+        - WEBHOOK_URL=http://alertmanager-bot:8080
+        - ALERTMANAGER_URL=http://alertmanager:9093
+  alert-receiver:
+    container_name: alert-receiver
     cpu_percent: 2
     mem_limit: 300m
     mem_reservation: 100m
@@ -37,12 +51,11 @@ services:
       - alertmanager_default
       - default-network
     ports:
-      - 9095:3000
+      - 9095:4000
     build:
-      context: alertmanager_webhook_proxy
+      context: alert_receiver
       dockerfile: Dockerfile
     environment:
-        - WEBHOOK_URL=http://alertmanager-bot:8080
         - ALERTMANAGER_URL=http://alertmanager:9093
   alertmanager-bot:
     container_name: alertmanager-bot

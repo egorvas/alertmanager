@@ -1,0 +1,85 @@
+swagger: '2.0'
+host: 'localhost:3000'
+info:
+  version: 1.0.0
+  title: Recivier for alerts.
+  description: Recivier will create a new alert in alertmanager.
+schemes:
+  - http
+paths:
+  '/alerts':
+    post:
+      summary: Create alerts
+      description: Request for creating new alerts at the alertmanager.
+      operationId: createAlerts
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          description: Body of the request
+          required: true
+          schema:
+            $ref: '#/definitions/PostBody'
+      responses:
+        '200':
+          description: successful operation
+        '500':
+          description: Internal error
+    delete:
+      summary: Delete alerts
+      description: Request for deleting alerts from alertmanager. This request will be ignored in case if alert isn't present at the alertmanager.
+      operationId: deleteAlerts
+      produces:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          description: Body of the request
+          required: true
+          schema:
+            $ref: '#/definitions/DeleteBody'
+      responses:
+        '200':
+          description: successful operation
+        '500':
+          description: Internal error
+definitions:
+  PostBody:
+    type: array
+    items:
+      minItems: 1
+      type: object
+      properties:
+        name:
+          type: string
+          description: name of the alert
+        description:
+          type: string
+          description: description of the alert
+        url:
+          type: string
+          description: url with information about alert
+        rules:
+          type: string
+          description: name of the rules for alert-filter
+      required:
+        - name
+        - description
+  DeleteBody:
+    type: array
+    items:
+      minItems: 1
+      type: object
+      properties:
+        name:
+          type: string
+          description: name of the alert
+        url:
+          type: string
+          description: url with information about alert
+        description:
+          type: string
+          description: description of the alert
+      required:
+        - name

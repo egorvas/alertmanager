@@ -60,4 +60,4 @@ receivers:
 - name: 'alertmananger-bot'
   webhook_configs:
   - send_resolved: true
-    url: 'http://alertmanager-webhook-proxy:3000/webhook'
+    url: 'http://alert-filter:3000/webhook'

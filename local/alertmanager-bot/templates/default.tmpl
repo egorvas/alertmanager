@@ -2,7 +2,7 @@
 {{ range .Alerts }}
 {{ if eq .Status "firing"}}🔥 <b>{{ .Status | toUpper }}</b> 🔥{{ else }}☘️ <b>{{ .Status | toUpper }}</b> ☘️{{ end }}
 <b>{{ .Labels.alertname }}</b>
-{{ .Annotations.message }}
+{{ .Annotations.description }}
 <b>Count:</b> {{ .Annotations.count }}
 <b>Duration:</b> {{ duration .StartsAt .EndsAt }}
 {{ if ne .GeneratorURL ""}}<b>Url:</b> {{ .GeneratorURL }}{{ end }}

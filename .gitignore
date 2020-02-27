@@ -1,2 +1,5 @@
 bot.db
 alertmanager_webhook_proxy/node_modules
+mime
+alert_filter/node_modules
+alert_receiver/node_modules

@@ -1,0 +1,16 @@
+{
+  "name": "alert_receiver",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bin/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "api-server": "git+https://github.com/amilabs/node-api-server.git",
+    "request": "^2.88.2",
+    "request-promise": "^4.2.5"
+  }
+}
