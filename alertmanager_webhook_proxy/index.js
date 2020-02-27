@@ -74,18 +74,19 @@ function finishAlert(req){
     if (req.body.rules === undefined || !req.body.rules) req.body.rules = "default";
     request.get(ALERT_MANAGER_URL+"/api/v2/alerts", {qs: "active=true"}, function (error, response) {
         if (error) logger.log('error', error);
-        const responseObject = JSON.parse(response.body);
-        if (responseObject.find(alert =>
+        const responseAlertmanager = JSON.parse(response.body);
+        const filteredAlert = responseAlertmanager.find(alert =>
             alert.labels.alertname === req.body.name &&
-            alert.labels.instance === req.body.instance)===undefined){
+            alert.labels.instance === req.body.instance);
+        if (filteredAlert===undefined){
             logger.info("No alerts %s to finish", req.body.name);
         }else {
             logger.info("Finishing alert %s", req.body.name);
             let data = [{
-                labels: responseObject[0].labels,
-                annotations: responseObject[0].annotations,
-                generatorURL: responseObject[0].generatorURL,
-                startsAt: responseObject[0].startsAt,
+                labels: filteredAlert.labels,
+                annotations: filteredAlert.annotations,
+                generatorURL: filteredAlert.generatorURL,
+                startsAt: filteredAlert.startsAt,
                 endsAt: new Date().toISOString()}];
             request.post(ALERT_MANAGER_URL+"/api/v2/alerts", {json: data, headers: {"Content-type": "application/json"}}, function (error) {
                 if (error) logger.log('error', error);
@@ -236,7 +237,6 @@ app.post('/webhook', (req, res) => {
             }
         }
     }
-
     res.status(200).json({ result: 'ok' });
 });
 
