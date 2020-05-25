@@ -5,6 +5,7 @@ services:
     container_name: alertmanager
     cpu_percent: 5
     mem_limit: 500m
+    memswap_limit: 0
     networks:
       - default-network
       - alertmanager_default
@@ -14,23 +15,11 @@ services:
     volumes:
       - ./local/alertmanager:/etc/alertmanager/
     restart: on-failure
-  karma:
-    image: lmierzwa/karma:latest
-    container_name: karma
-    cpu_percent: 2
-    mem_limit: 300m
-    mem_reservation: 100m
-    networks:
-      - alertmanager_default
-    ports:
-      - 9094:8080
-    restart: on-failure
-    environment:
-        - ALERTMANAGER_URI=http://alertmanager:9093
   alert-filter:
     container_name: alert-filter
     cpu_percent: 2
     mem_limit: 300m
+    memswap_limit: 0
     mem_reservation: 100m
     restart: on-failure
     networks:
@@ -45,6 +34,7 @@ services:
     container_name: alert-receiver
     cpu_percent: 2
     mem_limit: 300m
+    memswap_limit: 0
     mem_reservation: 100m
     restart: on-failure
     networks:
@@ -62,6 +52,7 @@ services:
     image: metalmatze/alertmanager-bot:0.4.2
     cpu_percent: 2
     mem_limit: 300m
+    memswap_limit: 0
     mem_reservation: 100m
     networks:
       - alertmanager_default
